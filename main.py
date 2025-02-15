@@ -170,7 +170,7 @@ with open(output_file, mode=file_mode, newline="", encoding="utf-8") as main_fil
             except requests.exceptions.RequestException as e:
                 print(f"Erro ao acessar a página {url}: {e}")
 
-# Salva o último ID usado
+# Save last used ID
 with open(id_file, "w") as f:
     f.write(str(last_id))
 
