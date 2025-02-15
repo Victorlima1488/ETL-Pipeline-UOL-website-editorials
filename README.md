@@ -71,4 +71,4 @@ This project is built with Python and uses the following libraries to implement 
 1. Clone this repository:  
 
    ```sh
-   git clone https://github.com/your-username/repository-name.git
+   git clone https://github.com/Victorlima1488/ETL-Pipeline-UOL-website-editorials.git
