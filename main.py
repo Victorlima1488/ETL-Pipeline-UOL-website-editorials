@@ -31,96 +31,96 @@ urls = [
     "https://educacao.uol.com.br/bancoderedacoes/redacoes/a-democracia-estende-se-ao-stf.html"
 ]
 
-# Diretório e nomes dos arquivos
+# Directory and file names
 output_dir = "textos_uol"
 output_file = os.path.join(output_dir, "dados_redacoes.csv")
 processed_links_file = os.path.join(output_dir, "processados.txt")
 title_file = os.path.join(output_dir, "titulos.csv")
 id_file = os.path.join(output_dir, "ultimo_id.txt")
 
-# Certifica-se de que o diretório existe, e se não, cria-o
+# Make sure the directory exists, and if not, create it
 os.makedirs(output_dir, exist_ok=True)
 
-# Carrega o último ID salvo (chave incremental) ou define como 0
+# Loads the last saved ID (incremental key) or sets it to 0
 if os.path.exists(id_file):
     with open(id_file, "r") as f:
         last_id = int(f.read().strip())
 else:
     last_id = 0
 
-# Função para gerar o próximo ID incremental
+# Function to generate the next incremental ID
 def generate_id():
     global last_id
     last_id += 1
     return f"{last_id:06d}"
 
-# Carrega os links já processados para evitar duplicação
+# Loads already processed links to avoid duplication
 if os.path.exists(processed_links_file):
     with open(processed_links_file, "r", encoding="utf-8") as f:
         processed_links = set(line.strip() for line in f)
 else:
     processed_links = set()
 
-# Verifica se o arquivo principal já existe para definir o modo de abertura e o cabeçalho
+# Checks if the main file already exists to set the opening mode and header
 file_mode = "a" if os.path.exists(output_file) else "w"
 
-# Abre o arquivo CSV principal para escrita e define o cabeçalho se necessário
+# Opens the main CSV file for writing and sets the header if necessary
 with open(output_file, mode=file_mode, newline="", encoding="utf-8") as main_file:
 
     writer_main = csv.writer(main_file)
     
-    # Escreve o cabeçalho no CSV principal
+    # Write the header to the main CSV
     if file_mode == "w":
         writer_main.writerow(["ID", "Título", "Subtítulo", "Texto da Redação", "Competências", "Notas das Competências", "Comentários das Competências", "Nota Final"])
 
-    # Abre o arquivo de títulos em modo "w" para garantir o cabeçalho limpo e correto
+    # Open the header file in "w" mode to ensure clean and correct header
     with open(title_file, mode="w", newline="", encoding="utf-8") as title_file_obj:
         writer_title = csv.writer(title_file_obj)
         # Escreve o cabeçalho para o arquivo de títulos
         writer_title.writerow(["ID", "Título"])
 
-        # Processa cada URL na lista
+        # Process each URL in the list
         for url in urls:
             if url in processed_links:
                 print(f"URL já processada, ignorando: {url}")
                 continue
 
             try:
-                # Gera um novo ID para a linha atual
+                # Generates a new ID for the current row
                 record_id = generate_id()
 
-                # Realiza a requisição GET para obter o conteúdo da página
+                # Performs the GET request to obtain the page content
                 response = requests.get(url)
-                response.raise_for_status()  # Verifica se houve algum erro na requisição
+                response.raise_for_status()  # Check if there was an error in the request
 
-                # Cria um objeto BeautifulSoup para analisar o HTML da página
+                # Creates a BeautifulSoup object to parse the page's HTML
                 soup = BeautifulSoup(response.text, 'html.parser')
 
-                # Extrai o título da redação
+                # Extract the title of the essay
                 title_tag = soup.find('i', class_='custom-title')
                 title = title_tag.get_text(strip=True) if title_tag else "Título não encontrado"
 
-                # Extrai o subtítulo da redação (h2 dentro de container-composition dentro de wording-correction)
+                # Extracts the subtitle of the essay (h2 inside container-composition inside wording-correction)
                 section_wording_correction = soup.find('section', class_='wording-correction')
                 container_composition = section_wording_correction.find('div', class_='container-composition') if section_wording_correction else None
                 subtitle_tag = container_composition.find('h2') if container_composition else None
                 subtitle = subtitle_tag.get_text(strip=True) if subtitle_tag else "Subtítulo não encontrado"
 
-                # Grava o título principal no arquivo de títulos, com o ID gerado
+                # Writes the main title to the titles file, with the generated ID
                 writer_title.writerow([record_id, title])
 
-                # Extrai o texto da redação dentro da tag 'text-composition'
+                # Extracts the text from the composition within the 'text-composition' tag
                 essay_section = soup.find('div', class_='text-composition')
 
                 if essay_section:
                     paragraphs = []
                     for p in essay_section.find_all('p'):
-                        # Para cada <p>, adiciona espaço antes e depois das tags <span> e <strong>
+                        # For each <p>, add space before and after the <span> and <strong> tags
                         for tag in p.find_all(['strong', 'span']):
-                            # Insere espaço ao redor do conteúdo de cada <span> e <strong>
+                            # Inserts space around the content of each <span> and <strong>
                             tag.insert_before(' ')
                             tag.insert_after(' ')
-                        # Extrai o texto processado, garantindo os espaços inseridos
+                        # Extracts the processed text, ensuring the inserted spaces
                         clean_text = p.get_text(strip=True)
                         paragraphs.append(clean_text)
                     essay_text = " ".join(paragraphs)
@@ -129,11 +129,11 @@ with open(output_file, mode=file_mode, newline="", encoding="utf-8") as main_fil
 
 
 
-                # Extrai as competências e notas, ignorando a "Nota Final"
+                # Extracts skills and grades, ignoring the "Final Grade"
                 competence_scores_section = soup.find('section', class_='results-table')
                 competence_scores_list = competence_scores_section.find_all('div', class_='rt-line-option') if competence_scores_section else []
 
-                # Listas para armazenar competências, notas, e comentários (excluindo a Nota Final)
+                # Lists to store skills, grades, and comments (excluding the Final Grade)
                 competences = []
                 competence_scores = []
                 final_score = "Nota final não encontrada"
@@ -143,25 +143,25 @@ with open(output_file, mode=file_mode, newline="", encoding="utf-8") as main_fil
                     points = score.find('span', class_='points').get_text(strip=True)
                     
                     if "Nota final" in topic:
-                        final_score = points  # Armazena a nota final separadamente
+                        final_score = points  # Stores the final grade separately
                     else:
                         competences.append(topic)
                         competence_scores.append(points)
 
-                # Extrai os comentários das competências
+                # Extracts feedback from skills
                 competence_comments_section = soup.find('h3', string="Competências")
                 competence_comments_list = competence_comments_section.find_next('ul').find_all('li') if competence_comments_section else []
                 competence_comments = [comment.get_text(strip=True) for comment in competence_comments_list]
                 concatenated_comments = "; ".join(competence_comments)
 
-                # Concatena as competências e as notas (sem a Nota Final) usando ";" como separador
+                # Concatenates skills and grades (without the Final Grade) using ";" as a separator
                 concatenated_competences = "; ".join(competences)
                 concatenated_scores = "; ".join(competence_scores)
 
-                # Escreve uma linha no CSV principal para cada URL processada
+                # Writes a line to the main CSV for each URL processed
                 writer_main.writerow([record_id, title, subtitle, essay_text, concatenated_competences, concatenated_scores, concatenated_comments, final_score])
 
-                # Marca a URL como processada e salva no arquivo de links processados
+                # Mark the URL as processed and save it to the processed links file
                 with open(processed_links_file, "a", encoding="utf-8") as f:
                     f.write(url + "\n")
                 
